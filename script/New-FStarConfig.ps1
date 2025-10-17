@@ -14,12 +14,12 @@ if (-not $FStarRootPath.Exists) {
 
 $fstarFileName = $IsWindows ? "fstar.exe" : "fstar"
 $fstarFilePath = Join-Path $FStarRootPath bin $fstarFileName -Resolve
-$fstarLibPath = Join-Path $FStarRootPath lib fstar -Resolve
+$fstarLibPath = Join-Path $FStarRootPath lib fstar ulib -Resolve
 
 $resultConfig = @{
     fstar_exe = $fstarFilePath
     options = @("--cache_dir", ".cache.boot", "--no_location_info", "--warn_error", "-271-272-241-319-274")
-    include_dirs = $fstarLibPath
+    include_dirs = @($fstarLibPath)
 }
 
 ConvertTo-Json $resultConfig | Out-File "$PSScriptRoot/../.fst.config.json"
