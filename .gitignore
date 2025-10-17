@@ -1,1 +1,2 @@
-.fst.config.json
+*.fst.config.json
+artifact
