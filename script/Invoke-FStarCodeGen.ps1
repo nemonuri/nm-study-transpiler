@@ -5,7 +5,8 @@ param (
     [Parameter(Mandatory)][FileInfo] $FStar,
     [Parameter(Mandatory)][string[]] $Path,
     [Parameter(Mandatory)][DirectoryInfo] $Out,
-    [ValidateSet("OCaml", "FSharp")][string] $Kind = "FSharp"
+    [ValidateSet("OCaml", "FSharp")][string] $Kind = "FSharp",
+    [Alias("lq")][switch] $LogQueries
 )
 
 Set-StrictMode -Version 3.0
@@ -26,4 +27,7 @@ foreach ($dir in $ensuredDirectories) {
 
 $files | Select-Object @{l="File"; e={$_}} | Out-String | Write-Host 
 
-& $FStar --codegen $Kind --odir $Out @files 
+$options = @()
+if ($LogQueries) { $options += "--log_queries" }
+
+& $FStar --codegen $Kind --odir $Out @options @files 

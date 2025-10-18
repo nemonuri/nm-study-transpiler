@@ -35,7 +35,8 @@ $options = @("--cache_dir", ".cache.boot", "--no_location_info", "--warn_error",
 if ($PrintImplicits) { $options += "--print_implicits" }
 if ($PrintFullNames) { $options += "--print_full_names" }
 
-$includeDirs = @($fstarLibPath) + $ExtraIncludeDirs
+$extraIncludeDirFullNames = $ExtraIncludeDirs | ForEach-Object { $_.FullName }
+$includeDirs = @($fstarLibPath) + $extraIncludeDirFullNames
 
 $resultConfig = @{
     fstar_exe = $fstarFilePath
