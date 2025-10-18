@@ -42,6 +42,7 @@ type index_point_kind =
    | PointHeap
 
 let is_null (i:nat) = i = 0
+let is_not_null (i:nat) = i > 0
 
 (* 
    There are two kinds of columns that index a metadata table.
@@ -51,3 +52,10 @@ let is_null (i:nat) = i = 0
 type table_column_kind =
   | Simple
   | Coded
+
+type resolution_scope =
+  | ResolutionScopeModule
+  | ResolutionScopeModuleRef
+  | ResolutionScopeAssemblyRef
+  | ResolutionScopeTypeRef
+
