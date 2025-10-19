@@ -1,6 +1,7 @@
 module Nemonuri.Ecma335.Metadata.TableSchema
 module M = Nemonuri.Ecma335.Metadata
 module Te = Nemonuri.Ecma335.Metadata.TableEntry
+module Ter = Nemonuri.Ecma335.Metadata.TableEntry.Refinement
 
 //--- module ---
 (* https://github.com/stakx/ecma-335/blob/master/docs/ii.22.30-module_0x00.md *)
