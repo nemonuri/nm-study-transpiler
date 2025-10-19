@@ -28,7 +28,6 @@ let get_value (e:t) : Tot nat =
   | GuidHeap v -> v
 
 
-
 let is_null (e:t) : Tot bool = get_value e |> M.is_null
 let is_not_null (e:t) : Tot bool = get_value e |> M.is_not_null
 
