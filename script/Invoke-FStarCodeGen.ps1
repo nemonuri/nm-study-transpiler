@@ -23,6 +23,9 @@ $files = @() + $ensuredFiles
 foreach ($dir in $ensuredDirectories) {
     $resolved = Join-Path $dir "*.fst" -Resolve
     $files = $files + $resolved
+
+    $resolved = Join-Path $dir "*.fsti" -Resolve
+    $files = $files + $resolved
 }
 
 $files | Select-Object @{l="File"; e={$_}} | Out-String | Write-Host 
