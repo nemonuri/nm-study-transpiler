@@ -21,7 +21,7 @@ open FStar.FiniteSet.Ambient
 open FStar.FiniteMap.Ambient
 let lemma_create_indices_set_zero () = admit ()
 
-type t (n:nat) (data_t:Type) : Type = x:FMap.map (I.under n) data_t {indexed_stack_map_predicate x}
+type t n data_t = x:FMap.map (I.under n) data_t {indexed_stack_map_predicate x}
 
 
 let empty (data_t:Type) : Tot (t 0 data_t) = FMap.emptymap #(I.under 0) #data_t
