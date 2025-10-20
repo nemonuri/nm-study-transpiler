@@ -12,8 +12,7 @@ private let rec create_indices_set_agg (n: nat) (idx:I.under (n+1)) :
   | true -> FSet.emptyset #(I.under n)
   | false -> FSet.insert idx (create_indices_set_agg n (idx+1))
 
-let create_indices_set (n: nat) : Tot (FSet.set (I.under n)) =
-  create_indices_set_agg n 0
+let create_indices_set n = create_indices_set_agg n 0
 
 let indexed_stack_map_predicate (#n:nat) (#data_t:Type) (m:FMap.map (I.under n) data_t) = FSet.equal (FMap.domain m) (create_indices_set n)
 
