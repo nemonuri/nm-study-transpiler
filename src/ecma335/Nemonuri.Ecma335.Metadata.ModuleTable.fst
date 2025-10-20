@@ -16,6 +16,6 @@ type t (p:Ts.premise) = {
 let maplike_module_table_refiner #p (mt:t p) (te:Te.t) : Tot bool = 
   Ter.module_table_index_predicate te && (te = mt.id)
 
-instance maplike_module_table #p (mt:t p) : Table.maplike (maplike_module_table_refiner mt) (Ts.module_schema p) = {
+instance maplike_t #p (mt:t p) : Table.maplike (maplike_module_table_refiner mt) (Ts.module_schema p) = {
   get_data = fun _ -> mt.data
 }
