@@ -5,6 +5,7 @@ module FMap = FStar.FiniteMap.Base
 module FSet = FStar.FiniteSet.Base
 open FStar.FiniteSet.Ambient
 open FStar.FiniteMap.Ambient
+module F = FStar.FunctionalExtensionality
 
 private let rec create_indices_set_agg (n: nat) (idx:I.under (n+1)) :
   Tot (FSet.set (I.under n))
@@ -15,18 +16,41 @@ private let rec create_indices_set_agg (n: nat) (idx:I.under (n+1)) :
 
 type indices_set (n:nat) = FSet.set (I.under n)
 
+private let interval_condition' (n:nat) (x y:int) (v:I.under n) = I.interval_condition x y v
+
+private let lemma_create_indices_set_agg_feq (n: nat) (idx:I.under (n+1)) (e:I.under n) :
+  Lemma (ensures (idx <= e) <==> (FSet.mem e (create_indices_set_agg n idx)))
+  =
+  let lhs = (idx <= e) in
+  let rhs = (FSet.mem e (create_indices_set_agg n idx)) in
+  let lemma_l_to_r' () : Lemma (lhs ==> rhs) =
+    admit ()
+  in
+  let lemma_r_to_l' () : Lemma (rhs ==> lhs) =
+    admit ()
+  in
+  lemma_l_to_r' ();
+  lemma_r_to_l' ()
+
 let create_indices_set (n:nat) : Tot (indices_set n) = create_indices_set_agg n 0
 
 let lemma_create_indices_set_subset (n: nat) (idx:I.under n) (idx2:nat{idx2 <= idx})
   : Lemma (ensures FSet.subset (create_indices_set_agg n idx) (create_indices_set_agg n idx2))
           //(decreases idx - idx2)
   =
+  let (s1, s2) = ((create_indices_set_agg n idx), (create_indices_set_agg n idx2)) in
   match idx = idx2 with
-  | true -> assert ((create_indices_set_agg n idx) == (create_indices_set_agg n idx2))
+  | true -> assert (s1 == s2)
   | false ->
   //let lemma_create_indices_set_mem2' 
-  assume (forall (x:I.under n). (idx <= x) <==> FSet.mem x (create_indices_set_agg n idx));
-  assume (forall (x:nat{idx <= x && x < n}). FSet.mem x (create_indices_set_agg n idx2))
+  FStar.Classical.forall_intro (lemma_create_indices_set_agg_feq n idx);
+  assert (forall (x:I.under n). (idx <= x) <==> (FSet.mem x s1));
+  FStar.Classical.forall_intro (lemma_create_indices_set_agg_feq n idx2);
+  assert (forall (x:I.under n). (idx2 <= x) <==> (FSet.mem x s2));
+  assert (forall (x:I.under n). (idx <= x) ==> (idx2 <= x));
+  assert (forall (x:I.under n). (FSet.mem x s1) ==> (FSet.mem x s2))
+  //assert (forall (x:I.under n). ((idx <= x) ==> (idx2 <= x)) <==> ((FSet.mem x s1) ==> (FSet.mem x s2)));
+  //assume (forall (x:nat{idx <= x && x < n}). FSet.mem x (create_indices_set_agg n idx2))
   //assert (forall (x:nat{idx <= x && x < n}). FSet.mem x (create_indices_set_agg n idx) ==> FSet.mem x (create_indices_set_agg n idx2))
 
 
