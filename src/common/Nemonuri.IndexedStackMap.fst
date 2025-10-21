@@ -16,8 +16,6 @@ private let rec create_indices_set_agg (n: nat) (idx:I.under (n+1)) :
 
 type indices_set (n:nat) = FSet.set (I.under n)
 
-private let interval_condition' (n:nat) (x y:int) (v:I.under n) = I.interval_condition x y v
-
 private let lemma_create_indices_set_agg_feq (n: nat) (idx:I.under (n+1)) (e:I.under n) :
   Lemma (ensures (idx <= e) <==> (FSet.mem e (create_indices_set_agg n idx)))
   =
@@ -36,7 +34,6 @@ let create_indices_set (n:nat) : Tot (indices_set n) = create_indices_set_agg n 
 
 let lemma_create_indices_set_subset (n: nat) (idx:I.under n) (idx2:nat{idx2 <= idx})
   : Lemma (ensures FSet.subset (create_indices_set_agg n idx) (create_indices_set_agg n idx2))
-          //(decreases idx - idx2)
   =
   let (s1, s2) = ((create_indices_set_agg n idx), (create_indices_set_agg n idx2)) in
   match idx = idx2 with
@@ -121,6 +118,7 @@ let to_invarient #n #data_t (m:t n data_t)
     map = to_invarient_indices_map m
   }
 
+//let to_varient 
 
 //---|
 
