@@ -24,11 +24,9 @@ let push #n (s:t n) : Tot (t (n+1)) =
 
 module Iv = Nemonuri.IndexSet.Invariant
 
-(*
-let to_invariant #n (s:t n) : Tot Iv.t =
-  {
-    count = n;
-    set = 
-  }
-*)
+let to_invariant #n (s:t n) : Tot Iv.t = Iv.create n
+
+//let to_variant (s:Iv.t) : Tot (t s.count) = s.set //...하....포기다, 포기!
+
+
 
