@@ -17,16 +17,29 @@ type indices_set (n:nat) = FSet.set (I.under n)
 
 let create_indices_set (n:nat) : Tot (indices_set n) = create_indices_set_agg n 0
 
+let lemma_create_indices_set_subset (n: nat) (idx:I.under n) (idx2:nat{idx2 <= idx})
+  : Lemma (ensures FSet.subset (create_indices_set_agg n idx) (create_indices_set_agg n idx2))
+          //(decreases idx - idx2)
+  =
+  match idx = idx2 with
+  | true -> assert ((create_indices_set_agg n idx) == (create_indices_set_agg n idx2))
+  | false ->
+  //let lemma_create_indices_set_mem2' 
+  assume (forall (x:I.under n). (idx <= x) <==> FSet.mem x (create_indices_set_agg n idx));
+  assume (forall (x:nat{idx <= x && x < n}). FSet.mem x (create_indices_set_agg n idx2))
+  //assert (forall (x:nat{idx <= x && x < n}). FSet.mem x (create_indices_set_agg n idx) ==> FSet.mem x (create_indices_set_agg n idx2))
+
+
 let lemma_create_indices_set_mem (n: nat) (idx:I.under n)
   : Lemma (ensures FSet.mem idx (create_indices_set n))
   =
   assert (n > 0);
   assert (FSet.mem idx (create_indices_set_agg n idx));
-  let lemma_create_indices_set_subset (idx2: nat{idx2 <= idx}) : 
+  let lemma_create_indices_set_subset' (idx2: nat{idx2 <= idx}) : 
     Lemma (ensures FSet.subset (create_indices_set_agg n idx) (create_indices_set_agg n idx2)) =
-    admit ()
+    lemma_create_indices_set_subset n idx idx2
   in
-  lemma_create_indices_set_subset 0
+  lemma_create_indices_set_subset' 0
 
 
 type indices_map (n:nat) (data_t:Type) = FMap.map (I.under n) data_t
@@ -44,16 +57,16 @@ let lemma_mem #n #data_t (m:t n data_t) (idx:I.under n)
   : Lemma (ensures FMap.mem idx m)
   =
   //--- Goal: `FSet.mem idx (FMap.domain m)` ---
-  let lemma_mem_domain () : Lemma (FSet.mem idx (FMap.domain m)) =
+  let lemma_mem_domain' () : Lemma (FSet.mem idx (FMap.domain m)) =
     //--- Goal: `FSet.mem idx (create_indices_set n)` ---
-    let lemma_mem_create_indices_set () : Lemma (FSet.mem idx (create_indices_set n)) =
-      admit ()
+    let lemma_create_indices_set_mem' () : Lemma (FSet.mem idx (create_indices_set n)) =
+      lemma_create_indices_set_mem n idx
     in
     //---|
-    lemma_mem_create_indices_set ()
+    lemma_create_indices_set_mem' ()
   in
   //---|
-  lemma_mem_domain ()
+  lemma_mem_domain' ()
 
 
 //---|
