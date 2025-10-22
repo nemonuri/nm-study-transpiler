@@ -54,16 +54,16 @@ let lemma_select #data_t (m:t data_t) (key:int{contains m key})
   ()
 
 let interval_does_not_contain_value (#data_t:eqtype) (m:t data_t) (v:data_t) (min:int) (max:int) = 
-  (forall (x:int).{:pattern (contains m x)\/(I.interval_condition min max x)\/(select m x = v)} 
+  (forall (x:int). //{:pattern (contains m x)\/(I.interval_condition min max x)\/(select m x = v)} 
     (contains m x) ==> (I.interval_condition min max x) ==> ~(select m x = v))
 
 private let rec contains_value_agg' (#data_t:eqtype) (m:t data_t) (v:data_t) (cur_key:int) 
   : Pure bool 
-      (requires (En.ensured_predicate m.fallback v) /\ (contains m cur_key) /\
-                (interval_does_not_contain_value m v (cur_key+1) (count m))
+      (requires (En.ensured_predicate m.fallback v) /\ (contains m cur_key) ///\
+                //(interval_does_not_contain_value m v (cur_key+1) (count m))
                 //(forall (x:int). (I.interval_condition (cur_key+1) (count m) x) ==> ~(select m x = v))
       )
-      (ensures fun _ -> true)
+      (ensures fun b -> (b ==> ~(interval_does_not_contain_value m v 0 (count m))))
       (decreases cur_key)
   =
   match select m cur_key = v with | true -> true 
@@ -71,6 +71,11 @@ private let rec contains_value_agg' (#data_t:eqtype) (m:t data_t) (v:data_t) (cu
   match cur_key = 0 with | true -> false
   | false ->
   contains_value_agg' m v (cur_key-1)
+
+let lemma_contains_value_agg' (#data_t:eqtype) (m:t data_t) (v:data_t) (cur_key:int)
+  : Lemma (requires (En.ensured_predicate m.fallback v) /\ (contains m cur_key) /\ (interval_does_not_contain_value m v 0 (count m)))
+          (ensures (contains_value_agg' m v cur_key) = false)
+  = ()
 
 private let lemma_contains_value_agg_result_is_false (#data_t:eqtype) (m:t data_t) (v:data_t) (cur_key:int) 
   : Lemma
@@ -84,13 +89,16 @@ private let lemma_contains_value_agg_result_is_false (#data_t:eqtype) (m:t data_
   =
   ()
 
+(*
 private let lemma_contains_value_agg_result_is_false_forall (#data_t:eqtype) (m:t data_t) (v:data_t)
   : Lemma (ensures ((contains_value_agg' m v 0) /\ ((contains_value_agg' m v ((count m) - 1)) = false)) ==> 
             (interval_does_not_contain_value m v 0 (count m)))
     [SMTPat (interval_does_not_contain_value m v);SMTPat (contains_value_agg' m v)]
   =
   FStar.Classical.forall_intro (lemma_contains_value_agg_result_is_false m v)
+*)
 
+(*
 private let rec lemma_contains_value_agg' (#data_t:eqtype) (m:t data_t) (v:data_t) (key_upper_bound:int) (ascending_key:int)
   : Lemma (requires (En.ensured_predicate m.fallback v) /\ (contains m key_upper_bound) /\
                     (interval_does_not_contain_value m v (key_upper_bound+1) (count m)) /\
@@ -108,7 +116,7 @@ private let rec lemma_contains_value_agg' (#data_t:eqtype) (m:t data_t) (v:data_
   match select m ascending_key = v with | true -> ()
   | false ->
   lemma_contains_value_agg' m v key_upper_bound (ascending_key+1)
-  
+*)
 
 (*
 private let lemma_contains_value_agg' (#data_t:eqtype) (m:t data_t) (v:data_t) (key_upper_bound:int) (cur_key:int)
@@ -128,7 +136,10 @@ let contains_value (#data_t:eqtype) (m:t data_t) (v:data_t) : Tot bool =
   | true ->
   contains_value_agg' m v ((count m) - 1)
 
-//let lemma_contains_value (#data_t:eqtype) (m:t data_t) (v:data_t)
+let lemma_contains_value (#data_t:eqtype) (m:t data_t) (v:data_t)
+  : Lemma (requires interval_does_not_contain_value m v 0 (count m))
+          (ensures (contains_value m v) = false)
+  = ()
 
 (*
 let lemma_contains_value (#data_t:eqtype) (m:t data_t) (v:data_t)
@@ -163,7 +174,7 @@ private let rec last_key_agg' (#data_t:eqtype) (m:t data_t) (v:data_t) (cur_key:
   =
   //assert (I.interval_condition 0 (count m) cur_key);
   //assume (~(forall (x:nat). ((contains m x) ==> ~(select m x = v))));
-  assume (exists (x:nat). (contains m x) /\ (select m x = v));
+  assert (exists (x:nat). (contains m x) /\ (select m x = v));
   //assert (exists (x:int{contains m x}). select m x = v);
   match select m cur_key = v with | true -> cur_key
   | false ->
