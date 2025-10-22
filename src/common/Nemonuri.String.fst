@@ -1,12 +1,17 @@
 module Nemonuri.String
 
-module U32 = FStar.UInt32
+open FStar.Char
 module L = FStar.List.Tot
 
-let t = list U32.t
+let t = list char
 
-let rec equal (str1:t) (str2:t) : Tot bool =
-  match (str1, str2) with
-  | (hd1::tl1, hd2::tl2) -> (hd1 = hd2) && (equal tl1 tl2)
-  | ([], []) -> true
-  | _ -> false
+let empty : t = []
+
+module Enp = Nemonuri.Ensured.Premise
+
+instance ensured_premise_t : Enp.t t =
+  {
+    fallback = empty
+  }
+
+type ensured_t = Enp.ensured t
