@@ -23,6 +23,8 @@ let count #data_t (m:unrefined_t data_t) : Tot nat = m.domain.count
 
 let contains #data_t (m:unrefined_t data_t) (x:int) : Tot bool = ISet.mem m.domain x
 
+let is_empty #data_t (m:unrefined_t data_t) : Tot bool = (count m) = 0
+
 let lemma_contains #data_t (m:unrefined_t data_t) (x:int)
   : Lemma (ensures (contains m x) <==> (I.interval_condition 0 (count m) x)) =
   ()
@@ -47,6 +49,19 @@ let index_map_predicate #data_t (m:unrefined_t data_t) =
     
 type t (data_t:Type) = x:unrefined_t data_t{index_map_predicate x}
 
+type ensured_t (data_t:Type) = x:t data_t{not (is_empty x)}
+
+let lemma_ensured #data_t (m:ensured_t data_t)
+  : Lemma ((count m) > 0) =
+  ()
+
+type ensured_data_t #data_t (m:t data_t) = En.t m.fallback
+
+type key_t #data_t (m:t data_t) = x:int{contains m x}
+
+let max_key #data_t (m:ensured_t data_t) : Tot (key_t m) =
+  (count m) - 1
+
 let select #data_t (m:t data_t) (key:int{contains m key}) : Tot data_t = Map.sel m.map key
 
 let lemma_select #data_t (m:t data_t) (key:int{contains m key})
@@ -54,146 +69,58 @@ let lemma_select #data_t (m:t data_t) (key:int{contains m key})
   ()
 
 let interval_does_not_contain_value (#data_t:eqtype) (m:t data_t) (v:data_t) (min:int) (max:int) = 
-  (forall (x:int). //{:pattern (contains m x)\/(I.interval_condition min max x)\/(select m x = v)} 
-    (contains m x) ==> (I.interval_condition min max x) ==> ~(select m x = v))
+  (forall (x:int). 
+      {:pattern (contains m x) \/ (I.interval_condition min max x) \/ (select m x = v)}
+      ((contains m x) /\ (I.interval_condition min max x)) ==> ~(select m x = v))
 
-private let rec contains_value_agg' (#data_t:eqtype) (m:t data_t) (v:data_t) (cur_key:int) 
+(* Node: 증명을 위해, 해당 함수의 해당 ensures 는 꼭 존재해야 한다. *)
+private let rec contains_value_agg' 
+  (#data_t:eqtype) (m:t data_t) (v:ensured_data_t m) (desending_key:key_t m) 
   : Pure bool 
-      (requires (En.ensured_predicate m.fallback v) /\ (contains m cur_key) ///\
-                //(interval_does_not_contain_value m v (cur_key+1) (count m))
-                //(forall (x:int). (I.interval_condition (cur_key+1) (count m) x) ==> ~(select m x = v))
-      )
+      (requires True)
       (ensures fun b -> (b ==> ~(interval_does_not_contain_value m v 0 (count m))))
-      (decreases cur_key)
+      (decreases desending_key)
   =
-  match select m cur_key = v with | true -> true 
+  match select m desending_key = v with | true -> true 
   | false -> 
-  match cur_key = 0 with | true -> false
+  match desending_key = 0 with | true -> false
   | false ->
-  contains_value_agg' m v (cur_key-1)
-
-let lemma_contains_value_agg' (#data_t:eqtype) (m:t data_t) (v:data_t) (cur_key:int)
-  : Lemma (requires (En.ensured_predicate m.fallback v) /\ (contains m cur_key) /\ (interval_does_not_contain_value m v 0 (count m)))
-          (ensures (contains_value_agg' m v cur_key) = false)
-  = ()
-
-private let lemma_contains_value_agg_result_is_false (#data_t:eqtype) (m:t data_t) (v:data_t) (cur_key:int) 
-  : Lemma
-      (requires (En.ensured_predicate m.fallback v) /\ (contains m cur_key) /\
-                (interval_does_not_contain_value m v (cur_key+1) (count m)) /\
-                ((contains_value_agg' m v cur_key) = false)
-      )
-      (ensures (interval_does_not_contain_value m v (cur_key) (count m)) /\
-               ((cur_key > 0) ==> ((contains_value_agg' m v (cur_key-1)) = false))
-      )
-  =
-  ()
-
-(*
-private let lemma_contains_value_agg_result_is_false_forall (#data_t:eqtype) (m:t data_t) (v:data_t)
-  : Lemma (ensures ((contains_value_agg' m v 0) /\ ((contains_value_agg' m v ((count m) - 1)) = false)) ==> 
-            (interval_does_not_contain_value m v 0 (count m)))
-    [SMTPat (interval_does_not_contain_value m v);SMTPat (contains_value_agg' m v)]
-  =
-  FStar.Classical.forall_intro (lemma_contains_value_agg_result_is_false m v)
-*)
-
-(*
-private let rec lemma_contains_value_agg' (#data_t:eqtype) (m:t data_t) (v:data_t) (key_upper_bound:int) (ascending_key:int)
-  : Lemma (requires (En.ensured_predicate m.fallback v) /\ (contains m key_upper_bound) /\
-                    (interval_does_not_contain_value m v (key_upper_bound+1) (count m)) /\
-                    (contains_value_agg' m v key_upper_bound) /\ (I.interval_condition 0 (key_upper_bound+1) ascending_key) /\
-                    (interval_does_not_contain_value m v 0 ascending_key)
-          )
-          (ensures ~(interval_does_not_contain_value m v 0 (key_upper_bound+1)))
-          (decreases key_upper_bound - ascending_key)
-          [SMTPat (interval_does_not_contain_value m v)]
-  =
-  match key_upper_bound = ascending_key with 
-  | true -> 
-      assert (~(select m key_upper_bound = v) ==> (interval_does_not_contain_value m v 0 (count m)))
-  | false ->
-  match select m ascending_key = v with | true -> ()
-  | false ->
-  lemma_contains_value_agg' m v key_upper_bound (ascending_key+1)
-*)
-
-(*
-private let lemma_contains_value_agg' (#data_t:eqtype) (m:t data_t) (v:data_t) (key_upper_bound:int) (cur_key:int)
-  : Lemma (requires (contains_value_agg' m v key_upper_bound) /\ 
-                    (I.interval_condition 0 (key_upper_bound+1) cur_key) /\
-                    (forall (x:int). (I.interval_condition 0 cur_key x) ==> (select m x <> v)))
-          (ensures exists (x:int). (select m x = v))
-  =
-  ()
-*)
+  contains_value_agg' m v (desending_key-1)
 
 
 let contains_value (#data_t:eqtype) (m:t data_t) (v:data_t) : Tot bool =
   match v = m.fallback with | true -> false 
   | false ->
-  match (count m) > 0 with | false -> false 
-  | true ->
-  contains_value_agg' m v ((count m) - 1)
+  match is_empty m with | true -> false 
+  | false ->
+  contains_value_agg' m v (max_key m)
 
 let lemma_contains_value (#data_t:eqtype) (m:t data_t) (v:data_t)
   : Lemma (requires interval_does_not_contain_value m v 0 (count m))
           (ensures (contains_value m v) = false)
   = ()
 
-(*
-let lemma_contains_value (#data_t:eqtype) (m:t data_t) (v:data_t)
-  : Ghost unit (requires (contains_value m v))
-               (ensures fun _ -> exists (x:nat). (contains m x) /\ (select m x = v))
+type contained_data_t (#data_t:eqtype) (m:t data_t) = x:data_t{contains_value m x}
+
+let lemma_contained_data (#data_t:eqtype) (m:t data_t) (v:contained_data_t m)
+  : Lemma ((En.ensured_predicate m.fallback v) /\ (not (is_empty m))) =
+  ()
+
+(* Note: 해당 함수의 해당 requires 는 꼭 존재해야 한다. *)
+private let rec last_key_agg' (#data_t:eqtype) (m:t data_t) (v:contained_data_t m) (desending_key:key_t m)
+  : Pure (key_t m)
+      (requires (interval_does_not_contain_value m v (desending_key+1) (count m)))
+      (ensures fun _ -> True)
+      (decreases desending_key)
   =
-  // assert (~(forall (x:nat). ~((contains m x) ==> (select m x = v))))
-  let p = (fun (x:nat) -> (contains m x) ==> (select m x = v)) in
-  assert (~(forall (x:nat). ~(p x)));
-*)
-
-(*
-private let p'' (data_t:eqtype) (m:t data_t) (v:data_t) (cur_key:int) = (contains m cur_key) ==> ~(select m cur_key = v)
-
-private let lemma_contains_value' (data_t:eqtype) (m:t data_t) (v:data_t)
-  : Lemma (requires (contains_value m v) /\ (contains m cur_key) /\
-                    ~(select m x = v))
-*)
-
-//let lemma_contains_value
-
-
-
-private let rec last_key_agg' (#data_t:eqtype) (m:t data_t) (v:data_t) (cur_key:int)
-  : Pure int
-        (requires 
-          (contains_value m v) /\ (contains m cur_key) /\
-          (forall (x:int). (I.interval_condition (cur_key+1) (count m) x) ==> (select m x <> v))
-        )
-        (ensures fun key -> contains m key)
-        (decreases cur_key)
-  =
-  //assert (I.interval_condition 0 (count m) cur_key);
-  //assume (~(forall (x:nat). ((contains m x) ==> ~(select m x = v))));
-  assert (exists (x:nat). (contains m x) /\ (select m x = v));
-  //assert (exists (x:int{contains m x}). select m x = v);
-  match select m cur_key = v with | true -> cur_key
-  | false ->
-  //match (count m) - 1 - cur_key = 0 with | true -> False
-  //| false ->
-  //assert (forall (x:nat). (I.interval_condition (cur_key) (count m) x) ==> (select m x <> v));
-  //let lemma' (x:nat{I.interval_condition 0 cur_key x})
-  //FStar.Classical.exists_intro_not_all_not (fun (x:int{I.interval_condition 0 cur_key x}) -> ~(select m x = v));
-  //assert (cur_key > 0);
-  //assert (contains_value_agg m v )
-  last_key_agg' m v (cur_key-1)
+  match select m desending_key = v with 
+  | true -> desending_key
+  | false -> last_key_agg' m v (desending_key-1)
   
-
-(*
-let first_index (#data_t:eqtype) (m:t data_t) (v:data_t{contains_value m v}) 
-  : Tot (key:int{contains m key})
+let last_key (#data_t:eqtype) (m:t data_t) (v:contained_data_t m)
+  : Tot (key_t m)
   =
-*)
-
+  last_key_agg' m v (max_key m)
 
 (* Note:
    FStar 의 기본 Map 은, Set 이나 List 와 다르게 `empty` 가 아니라,
