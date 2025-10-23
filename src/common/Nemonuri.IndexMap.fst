@@ -69,10 +69,10 @@ let lemma_select #data_t (m:t data_t) (key:key_t m)
   : Lemma (select m key =!= m.fallback) =
   ()
 
-let interval_does_not_contain_value (#data_t:eqtype) (m:t data_t) (v:data_t) (min:int) (max:int) = 
+let interval_does_not_contain_value (#data_t:eqtype) (m:t data_t) (v:data_t) (min:int) (emax:int) = 
   (forall (x:int). 
-      {:pattern (contains m x) \/ (I.interval_condition min max x) \/ (select m x = v)}
-      ((contains m x) /\ (I.interval_condition min max x)) ==> ~(select m x = v))
+      {:pattern (contains m x) \/ (I.interval_condition min emax x) \/ (select m x = v)}
+      ((contains m x) /\ (I.interval_condition min emax x)) ==> ~(select m x = v))
 
 (* Note: 증명을 위해, 해당 함수의 해당 ensures 는 꼭 존재해야 한다. *)
 (* Note: 이런 재귀 함수의 ensures 는, 가능한 '동치'식으로 명세하라! 그래야 편하다! *)
@@ -147,7 +147,9 @@ let lemma_contained_data (#data_t:eqtype) (m:t data_t) (v:contained_data_t m)
 private let rec last_key_agg' (#data_t:eqtype) (m:t data_t) (v:contained_data_t m) (desending_key:key_t m)
   : Pure (key_t m)
       (requires (interval_does_not_contain_value m v (desending_key+1) (count m)))
-      (ensures fun _ -> True)
+      (ensures fun r -> (interval_does_not_contain_value m v (r+1) (count m)) /\
+                        ~(interval_does_not_contain_value m v 0 (r+1)) /\
+                        (select m r = v))
       (decreases desending_key)
   =
   match select m desending_key = v with 
@@ -158,6 +160,27 @@ let last_key (#data_t:eqtype) (m:t data_t) (v:contained_data_t m)
   : Tot (key_t m)
   =
   last_key_agg' m v (max_key m)
+
+private let rec first_key_agg' (#data_t:eqtype) (m:t data_t) (v:contained_data_t m) (ascending_key:key_t m)
+  : Pure (key_t m)
+      (requires (interval_does_not_contain_value m v 0 ascending_key))
+      (ensures fun r -> (interval_does_not_contain_value m v 0 r) /\
+                        ~(interval_does_not_contain_value m v r (count m)) /\
+                        (select m r = v))
+      (decreases (max_key m) - ascending_key)
+  =
+  match select m ascending_key = v with 
+  | true -> ascending_key
+  | false -> first_key_agg' m v (ascending_key+1)
+  
+let first_key (#data_t:eqtype) (m:t data_t) (v:contained_data_t m)
+  : Tot (key_t m)
+  =
+  first_key_agg' m v 0
+
+
+
+
 
 (* Note:
    FStar 의 기본 Map 은, Set 이나 List 와 다르게 `empty` 가 아니라,
@@ -176,7 +199,7 @@ let push #data_t (m:t data_t) (v:En.t m.fallback) : Tot (t data_t) =
     map = Map.upd m.map (count m) v
   }
 
-let pop #data_t (m:t data_t{(count m) > 0}) : Tot ((t data_t) & (key_value data_t)) =
+let pop #data_t (m:ensured_t data_t) : Tot ((t data_t) & (key_value data_t)) =
   let ( next_domain, key ) = ISet.pop m.domain in
   let value = Map.sel m.map key in
   let next_map = {
