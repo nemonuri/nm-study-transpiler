@@ -7,6 +7,7 @@ module ISet = Nemonuri.IndexSet
 module L = FStar.List.Tot
 module F = FStar.FunctionalExtensionality
 module En = Nemonuri.Ensured
+module Cl = FStar.Classical
 
 (* Note: 
   Collection 의 원소 타입이 refine 되어야 하는 타입은, 
@@ -62,9 +63,9 @@ type key_t #data_t (m:t data_t) = x:int{contains m x}
 let max_key #data_t (m:ensured_t data_t) : Tot (key_t m) =
   (count m) - 1
 
-let select #data_t (m:t data_t) (key:int{contains m key}) : Tot data_t = Map.sel m.map key
+let select #data_t (m:t data_t) (key:key_t m) : Tot data_t = Map.sel m.map key
 
-let lemma_select #data_t (m:t data_t) (key:int{contains m key})
+let lemma_select #data_t (m:t data_t) (key:key_t m)
   : Lemma (select m key =!= m.fallback) =
   ()
 
@@ -73,12 +74,17 @@ let interval_does_not_contain_value (#data_t:eqtype) (m:t data_t) (v:data_t) (mi
       {:pattern (contains m x) \/ (I.interval_condition min max x) \/ (select m x = v)}
       ((contains m x) /\ (I.interval_condition min max x)) ==> ~(select m x = v))
 
-(* Node: 증명을 위해, 해당 함수의 해당 ensures 는 꼭 존재해야 한다. *)
+(* Note: 증명을 위해, 해당 함수의 해당 ensures 는 꼭 존재해야 한다. *)
+(* Note: 이런 재귀 함수의 ensures 는, 가능한 '동치'식으로 명세하라! 그래야 편하다! *)
 private let rec contains_value_agg' 
   (#data_t:eqtype) (m:t data_t) (v:ensured_data_t m) (desending_key:key_t m) 
   : Pure bool 
-      (requires True)
-      (ensures fun b -> (b ==> ~(interval_does_not_contain_value m v 0 (count m))))
+      //(requires True)
+      (requires (interval_does_not_contain_value m v (desending_key+1) (count m)))
+      (ensures fun b -> //(~b ==> interval_does_not_contain_value m v desending_key (count m)) /\
+                        //(b ==> forall (x:key_t m{x >= desending_key}). (contains_value_agg' m v x))
+                        (b <==> (interval_does_not_contain_value m v (desending_key+1) (count m)) /\
+                                ~(interval_does_not_contain_value m v 0 (count m))))
       (decreases desending_key)
   =
   match select m desending_key = v with | true -> true 
@@ -87,6 +93,14 @@ private let rec contains_value_agg'
   | false ->
   contains_value_agg' m v (desending_key-1)
 
+(*
+private let lemma_contains_value_agg'
+  (#data_t:eqtype) (m:t data_t) (v:ensured_data_t m) (desending_key:key_t m) (ge_key:key_t m{ge_key >= desending_key})
+  : Lemma (requires (contains_value_agg' m v desending_key))
+          (ensures (contains_value_agg' m v ge_key))
+  =
+  admit ()
+*)
 
 let contains_value (#data_t:eqtype) (m:t data_t) (v:data_t) : Tot bool =
   match v = m.fallback with | true -> false 
@@ -96,9 +110,32 @@ let contains_value (#data_t:eqtype) (m:t data_t) (v:data_t) : Tot bool =
   contains_value_agg' m v (max_key m)
 
 let lemma_contains_value (#data_t:eqtype) (m:t data_t) (v:data_t)
-  : Lemma (requires interval_does_not_contain_value m v 0 (count m))
-          (ensures (contains_value m v) = false)
-  = ()
+  : Lemma (~(interval_does_not_contain_value m v 0 (count m)) <==> (contains_value m v))
+  = 
+  ()
+  //let p1 = (interval_does_not_contain_value m v 0 (count m)) in
+  //let p2 = (contains_value m v) in
+  //assert (p2 ==> ~p1); // r to l
+  //assert (~p2 ==> p1) // l to r
+  
+
+
+let lemma_select_to_contains_value (#data_t:eqtype) (m:t data_t) (key:key_t m) (v:data_t)
+  : Lemma (requires (select m key = v))
+          (ensures (contains_value m v))
+  =
+  //let p1 = (select m key = v) in
+  //let p2 = (~(interval_does_not_contain_value m v 0 (count m))) in
+  //let v = select m key in
+
+  //Cl.move_requires_2 (lemma_contains_value #data_t) m v;
+  ()
+
+let lemma_contains_value_to_select (#data_t:eqtype) (m:t data_t) (v:data_t)
+  : Lemma (requires (contains_value m v))
+          (ensures exists (key:key_t m). (select m key = v))
+  =
+  ()
 
 type contained_data_t (#data_t:eqtype) (m:t data_t) = x:data_t{contains_value m x}
 
