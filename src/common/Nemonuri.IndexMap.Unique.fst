@@ -1,6 +1,7 @@
 module Nemonuri.IndexMap.Unique
 
 open Nemonuri.IndexMap
+module Ui = Nemonuri.Unique.IntegerIntervals
 module Cl = FStar.Classical
 
 let unique_data_predicate (#data_t:eqtype) (m:t data_t) (v:contained_data_t m) : Tot bool =
@@ -8,18 +9,25 @@ let unique_data_predicate (#data_t:eqtype) (m:t data_t) (v:contained_data_t m) :
 
 type unique_data_t (#data_t:eqtype) (m:t data_t) = x:contained_data_t m{unique_data_predicate m x}
 
+let data_to_prop (#data_t:eqtype) (m:t data_t) (v:unique_data_t m) =
+  Ui.create_prop 
+    0 (count m) (equal_selection m v) (last_key m v) () () (lemma_contains_value m v)
+
 //let lemma_unique_data2 (#data_t:eqtype) (m:t data_t) (v:unique_data_t m)
 //  : Lemma ()
 
 let lemma_unique_data (#data_t:eqtype) (m:t data_t) (k:key_t m) (v:contained_data_t m)
-  : Lemma ((unique_data_predicate m v) ==> ((v = select m k) <==> (last_key m v = k)))
+  : Lemma ((unique_data_predicate m v) ==> ((equal_selection m v k) <==> (last_key m v = k)))
   =
   match (unique_data_predicate m v) with | false -> () | true ->
+  assert (data_to_prop m v)
+  (*
   let uk = last_key m v in
-  assert (~(interval_does_not_contain_value m v 0 (count m)));
-  assert (interval_does_not_contain_value m v (uk+1) (count m));
-  assert (interval_does_not_contain_value m v 0 uk);
-  assert (v = select m uk)
+  assert (~(equal_selection_restricted m v 0 (count m)));
+  assert (equal_selection_restricted m v (uk+1) (count m));
+  assert (equal_selection_restricted m v 0 uk);
+  assert (equal_selection m v uk)
+  *)
   (*
   let pl = (v = select m k) in
   let pr = (last_key m v = k) in

@@ -8,6 +8,7 @@ module L = FStar.List.Tot
 module F = FStar.FunctionalExtensionality
 module En = Nemonuri.Ensured
 module Cl = FStar.Classical
+module Ui = Nemonuri.Unique.IntegerIntervals
 
 (* Note: 
   Collection 의 원소 타입이 refine 되어야 하는 타입은, 
@@ -69,10 +70,19 @@ let lemma_select #data_t (m:t data_t) (key:key_t m)
   : Lemma (select m key =!= m.fallback) =
   ()
 
-let interval_does_not_contain_value (#data_t:eqtype) (m:t data_t) (v:data_t) (min:int) (emax:int) = 
-  (forall (x:int). 
-      {:pattern (contains m x) \/ (I.interval_condition min emax x) \/ (select m x = v)}
-      ((contains m x) /\ (I.interval_condition min emax x)) ==> ~(select m x = v))
+let equal_selection (#data_t:eqtype) (m:t data_t) (v:data_t) (k:key_t m)
+  : Tot bool = select m k = v
+
+let equal_selection_restricted (#data_t:eqtype) (m:t data_t) (v:data_t) (imin:int) (emax:int) = 
+  ((contains m imin) /\ ((contains m emax) \/ ((count m) = emax))) ==> 
+  (Ui.is_restricted imin emax (equal_selection m v))
+
+//let equal_selection_exist (#data_t:eqtype) (m:t data_t) (v:data_t) (imin:int) (emax:int) = 
+//  (contains m imin) /\ (contains m emax) /\ (Ui.is_exist imin emax (equal_selection m v))
+
+//  (forall (x:int). 
+//      {:pattern (contains m x) \/ (I.interval_condition imin emax x) \/ (select m x = v)}
+//      ((contains m x) /\ (I.interval_condition imin emax x)) ==> ~(select m x = v))
 
 (* Note: 증명을 위해, 해당 함수의 해당 ensures 는 꼭 존재해야 한다. *)
 (* Note: 이런 재귀 함수의 ensures 는, 가능한 '동치'식으로 명세하라! 그래야 편하다! *)
@@ -80,14 +90,14 @@ private let rec contains_value_agg'
   (#data_t:eqtype) (m:t data_t) (v:ensured_data_t m) (desending_key:key_t m) 
   : Pure bool 
       //(requires True)
-      (requires (interval_does_not_contain_value m v (desending_key+1) (count m)))
-      (ensures fun b -> //(~b ==> interval_does_not_contain_value m v desending_key (count m)) /\
+      (requires (equal_selection_restricted m v (desending_key+1) (count m)))
+      (ensures fun b -> //(~b ==> equal_selection_restricted m v desending_key (count m)) /\
                         //(b ==> forall (x:key_t m{x >= desending_key}). (contains_value_agg' m v x))
-                        (b <==> (interval_does_not_contain_value m v (desending_key+1) (count m)) /\
-                                ~(interval_does_not_contain_value m v 0 (count m))))
+                        (b <==> (equal_selection_restricted m v (desending_key+1) (count m)) /\
+                                ~(equal_selection_restricted m v 0 (desending_key+1))))
       (decreases desending_key)
   =
-  match select m desending_key = v with | true -> true 
+  match equal_selection m v desending_key with | true -> true 
   | false -> 
   match desending_key = 0 with | true -> false
   | false ->
@@ -110,10 +120,10 @@ let contains_value (#data_t:eqtype) (m:t data_t) (v:data_t) : Tot bool =
   contains_value_agg' m v (max_key m)
 
 let lemma_contains_value (#data_t:eqtype) (m:t data_t) (v:data_t)
-  : Lemma (~(interval_does_not_contain_value m v 0 (count m)) <==> (contains_value m v))
+  : Lemma (~(equal_selection_restricted m v 0 (count m)) <==> (contains_value m v))
   = 
   ()
-  //let p1 = (interval_does_not_contain_value m v 0 (count m)) in
+  //let p1 = (equal_selection_restricted m v 0 (count m)) in
   //let p2 = (contains_value m v) in
   //assert (p2 ==> ~p1); // r to l
   //assert (~p2 ==> p1) // l to r
@@ -125,7 +135,7 @@ let lemma_select_to_contains_value (#data_t:eqtype) (m:t data_t) (key:key_t m) (
           (ensures (contains_value m v))
   =
   //let p1 = (select m key = v) in
-  //let p2 = (~(interval_does_not_contain_value m v 0 (count m))) in
+  //let p2 = (~(equal_selection_restricted m v 0 (count m))) in
   //let v = select m key in
 
   //Cl.move_requires_2 (lemma_contains_value #data_t) m v;
@@ -146,13 +156,13 @@ let lemma_contained_data (#data_t:eqtype) (m:t data_t) (v:contained_data_t m)
 (* Note: 해당 함수의 해당 requires 는 꼭 존재해야 한다. *)
 private let rec last_key_agg' (#data_t:eqtype) (m:t data_t) (v:contained_data_t m) (desending_key:key_t m)
   : Pure (key_t m)
-      (requires (interval_does_not_contain_value m v (desending_key+1) (count m)))
-      (ensures fun r -> (interval_does_not_contain_value m v (r+1) (count m)) /\
-                        ~(interval_does_not_contain_value m v 0 (r+1)) /\
-                        (select m r = v))
+      (requires (equal_selection_restricted m v (desending_key+1) (count m)))
+      (ensures fun r -> (equal_selection_restricted m v (r+1) (count m)) /\
+                        ~(equal_selection_restricted m v 0 (r+1)) /\
+                        (equal_selection m v r))
       (decreases desending_key)
   =
-  match select m desending_key = v with 
+  match equal_selection m v desending_key with 
   | true -> desending_key
   | false -> last_key_agg' m v (desending_key-1)
   
@@ -163,9 +173,9 @@ let last_key (#data_t:eqtype) (m:t data_t) (v:contained_data_t m)
 
 private let rec first_key_agg' (#data_t:eqtype) (m:t data_t) (v:contained_data_t m) (ascending_key:key_t m)
   : Pure (key_t m)
-      (requires (interval_does_not_contain_value m v 0 ascending_key))
-      (ensures fun r -> (interval_does_not_contain_value m v 0 r) /\
-                        ~(interval_does_not_contain_value m v r (count m)) /\
+      (requires (equal_selection_restricted m v 0 ascending_key))
+      (ensures fun r -> (equal_selection_restricted m v 0 r) /\
+                        ~(equal_selection_restricted m v r (count m)) /\
                         (select m r = v))
       (decreases (max_key m) - ascending_key)
   =
