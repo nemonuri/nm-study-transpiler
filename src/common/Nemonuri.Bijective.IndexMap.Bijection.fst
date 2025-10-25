@@ -1,8 +1,9 @@
 module Nemonuri.Bijective.IndexMap.Bijection
 
 open Nemonuri.Bijective.IndexMap
-open Nemonuri.IndexMap { key_t, unique_data_predicate, unique_data_t, contained_data_t,
-                         unique_key_predicate, unique_key_t, ensured_data_t }
+open Nemonuri.IndexMap { key_t,  contained_data_t, ensured_data_t }
+open Nemonuri.IndexMap.Unique { map_is_distinct, unique_key_predicate, unique_data_predicate, lemma_map_is_distinct,
+                                unique_key_t, unique_data_t }
 open FStar.Bijection { (=~) }
 module B = FStar.Bijection
 

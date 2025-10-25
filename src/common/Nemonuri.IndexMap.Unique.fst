@@ -98,10 +98,10 @@ let lemma_map_is_distinct (#data_t:eqtype) (m:t data_t)
   let pr = (forall (x:key_t m). (unique_key_predicate m x)) in
   let pr1 = (forall (x:key_t m). (Lu.predicate_is_linear_unique 0 (count m) (equal_selection_key m x) x)) in
   let pl1 = (forall (x1 x2:key_t m). (x1 <> x2) ==> ~(equal_selection_key m x1 x2)) in
-  let lemma_pr_ep_pr1' () : Lemma (pr <==> pr1) =
+  let lemma_pr_eq_pr1' () : Lemma (pr <==> pr1) =
     Cl.forall_intro (lemma_unique_key_predicate m)
   in
-  let lemma_pl_ep_pl1' () : Lemma (pl <==> pl1) =
+  let lemma_pl_eq_pl1' () : Lemma (pl <==> pl1) =
     (* Note: 이건 당연히 쉽게 증명 될 것이다. *)
     assert (pl1 ==> pl);
     let lemma_pl_to_pl1' () : Lemma (requires pl) (ensures pl1) =
@@ -118,5 +118,5 @@ let lemma_map_is_distinct (#data_t:eqtype) (m:t data_t)
     in
     Cl.move_requires lemma_pl_to_pl1' ()
   in
-  lemma_pr_ep_pr1' ();
-  lemma_pl_ep_pl1' ()
+  lemma_pr_eq_pr1' ();
+  lemma_pl_eq_pl1' ()

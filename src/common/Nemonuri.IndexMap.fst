@@ -38,7 +38,7 @@ let lemma_contains_lesser #data_t (m:unrefined_t data_t) (x1:int) (x2:int)
   =
   ()
 
-type key_value (data_t:Type) = {
+type key_value_t (data_t:Type) = {
   key: int;
   value: data_t
 }
@@ -59,6 +59,7 @@ let lemma_ensured #data_t (m:ensured_t data_t)
   ()
 
 type ensured_data_t #data_t (m:t data_t) = En.t m.fallback
+//type ensured_key_value_t #data_t (m:t data_t) = x:key_value_t data_t{En.ensured_predicate m.fallback x.value}
 
 type key_t #data_t (m:t data_t) = x:int{contains m x}
 type key_or_count_t #data_t (m:t data_t) = x:int{contains m x || (count m) = x}
@@ -220,14 +221,14 @@ let empty (#data_t:Type) (fb:data_t) : Tot (t data_t) =
     map = Map.const_on ISet.empty.set fb
   }
 
-let push #data_t (m:t data_t) (v:En.t m.fallback) : Tot (t data_t) =
+let push #data_t (m:t data_t) (v:ensured_data_t m) : Tot (t data_t) =
   {
     domain = ISet.push m.domain;
     fallback = m.fallback;
     map = Map.upd m.map (count m) v
   }
 
-let pop #data_t (m:ensured_t data_t) : Tot ((t data_t) & (key_value data_t)) =
+let pop #data_t (m:ensured_t data_t) : Tot ((t data_t) & (key_value_t data_t)) =
   let ( next_domain, key ) = ISet.pop m.domain in
   let value = Map.sel m.map key in
   let next_map = {
@@ -237,6 +238,18 @@ let pop #data_t (m:ensured_t data_t) : Tot ((t data_t) & (key_value data_t)) =
     map = Map.upd m.map key m.fallback |> Map.restrict next_domain.set
   } in
   (next_map, {key = key; value = value})
+
+let lemma_push_pop #data_t (m:t data_t) (v:ensured_data_t m)
+  : Lemma ((pop (push m v)) == (m, {key=(count m);value=v})) 
+  =
+  admit ()
+
+let lemma_pop_push #data_t (m:ensured_t data_t)
+  : Lemma (let (m2, kv) = pop m in m2 == (push m kv.value))
+  =
+  let (m2, kv) = pop m in
+  lemma_push_pop m2 kv.value;
+  admit ()
 
 (*
 let domain #data_t (m:t data_t) : Tot (ISet.t) =
