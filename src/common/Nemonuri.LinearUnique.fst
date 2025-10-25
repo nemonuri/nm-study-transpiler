@@ -59,6 +59,16 @@ let lemma_try_unique
   : Lemma (try_unique imin emax predicate |> try_unique_post imin emax predicate) =
   ()
 
+let predicate_is_linear_unique
+  (imin: int) (emax: int) 
+  (predicate: predicate_t imin emax)
+  (witness: I.interval imin emax)
+  : Tot Type0 =
+  (not_found_in imin witness predicate) /\ 
+  (not_found_in (witness+1) emax predicate) /\
+  (predicate witness)
+
+(*
 let linear_unique_predicate
   (imin: int) (emax: int) 
   (predicate: predicate_t imin emax)
@@ -77,17 +87,18 @@ type unrefined_t = {
 }
 
 type t = x:unrefined_t{linear_unique_predicate x.imin x.emax x.predicate x.witness}
+*)
 
-let lemma_linear_unique_aux1
+private let lemma_linear_unique_aux1
   (imin: int) (emax: int) 
   (predicate: predicate_t imin emax)
   (witness: I.interval imin emax)
-  : Lemma ((linear_unique_predicate imin emax predicate witness) <==>
+  : Lemma ((predicate_is_linear_unique imin emax predicate witness) <==>
            (try_unique_some_post imin emax predicate witness))
   =
   ()
 
-let lemma_linear_unique_aux2
+private let lemma_linear_unique_aux2
   (imin: int) (emax: int) 
   (predicate: predicate_t imin emax)
   (witness: I.interval imin emax)
@@ -101,7 +112,7 @@ let lemma_linear_unique
   (predicate: predicate_t imin emax)
   (witness: I.interval imin emax)
   : Lemma (
-      let p1 = (linear_unique_predicate imin emax predicate witness) in
+      let p1 = (predicate_is_linear_unique imin emax predicate witness) in
       let p2 = (try_unique_some_post imin emax predicate witness) in
       let p3 = (try_unique_witness imin emax predicate = Some witness) in
       (p1 <==> p2) /\ (p2 <==> p3))
