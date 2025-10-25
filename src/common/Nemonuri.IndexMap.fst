@@ -78,6 +78,10 @@ let equal_selection (#data_t:eqtype) (m:t data_t) (v:data_t) (k:key_t m)
 let equal_selection_key (#data_t:eqtype) (m:t data_t) (k1:key_t m) (k2:key_t m)
   : Tot bool = let v = select m k1 in equal_selection m v k2
 
+let lemma_equal_selection_key (#data_t:eqtype) (m:t data_t) (k:key_t m)
+  : Lemma (equal_selection_key m k k) =
+  ()
+
 //let equal_selection_restricted (#data_t:eqtype) (m:t data_t) (v:data_t) (imin:int) (emax:int) = 
 //  ((contains m imin) /\ ((contains m emax) \/ ((count m) = emax))) ==> 
 //  (Ui.is_restricted imin emax (equal_selection m v))
