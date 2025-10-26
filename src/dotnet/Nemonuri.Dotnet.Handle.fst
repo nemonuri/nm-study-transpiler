@@ -18,3 +18,4 @@ let is_nil (h:t) : Tot bool = h.value = 0
 let offset (h:t{is_heap_handle h}) : Tot nat = h.value
 let row_id (h:t{is_entity_handle h}) : Tot nat = h.value
 
+type explicit_t (k:Ht.t) = x:t{x.kind = k}
