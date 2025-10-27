@@ -8,3 +8,5 @@ module H = Nemonuri.Dotnet.Handle
 type t = 
 | TypeDef: v:(H.explicit_t Ht.TypeDef) -> t
 | TypeRef: v:(H.explicit_t Ht.TypeRef) -> t
+
+//module Nemonuri.Dotnet.TypeDefOrRefOrSpec
