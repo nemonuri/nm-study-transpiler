@@ -36,7 +36,7 @@ if ($PrintImplicits) { $options += "--print_implicits" }
 if ($PrintFullNames) { $options += "--print_full_names" }
 
 $extraIncludeDirFullNames = $ExtraIncludeDirs | ForEach-Object { $_.FullName }
-$includeDirs = @($fstarLibPath) + $extraIncludeDirFullNames
+$includeDirs = @($fstarLibPath) + $extraIncludeDirFullNames + $OutDirectoryPath.FullName
 
 $resultConfig = @{
     fstar_exe = $fstarFilePath
