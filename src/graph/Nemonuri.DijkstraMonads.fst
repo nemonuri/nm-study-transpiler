@@ -58,8 +58,18 @@ open FStar.Monotonic.Pure
 //effect t (result_t:eqtype) (state_t:eqtype) (ts:ts_t) (wp:wp_t state_t ts result_t) (pre_state:state_t) =
 //  PURE ((ts result_t) & state_t) (as_pure_wp (wp pre_state))
 
-type arrow_t (result_t op_expr_t state_t:eqtype) (ts:ts_t) (wp:wp_t state_t ts result_t) =
-  (pre_state:state_t) -> (op_expr:op_expr_t) -> PURE ((ts result_t) & state_t) (as_pure_wp (wp pre_state))
+//type result_type_factory_t (op_expr_t:eqtype) = op_expr_t -> eqtype
+type op_to_post_t (result_t op_expr_t state_t:eqtype) (ts:ts_t) // (rtf:result_type_factory_t op_expr_t) = 
+  =
+  op_expr_t -> Tot (post_t state_t ts result_t)
+
+type arrow_t 
+  (result_t #op_expr_t #state_t:eqtype) (#ts:ts_t) 
+  (op_to_post:op_to_post_t result_t op_expr_t state_t ts) =
+  (pre_state:state_t) -> (op_expr:op_expr_t) -> (wp:wp_t state_t ts result_t) 
+    -> Tot (r:((ts result_t) & state_t){wp pre_state (op_to_post op_expr)})
+  //{FStar.Classical.impl_intro_tot (wp pre_state r)}
+  //PURE ((ts result_t) & state_t) (as_pure_wp (wp pre_state))
 
 type post_factory_t (state_t:eqtype) (ts:ts_t) (result_t:eqtype) = state_t -> post_t state_t ts result_t
 let to_post_factory (state_t:eqtype) (ts:ts_t) (result_t:eqtype) 
