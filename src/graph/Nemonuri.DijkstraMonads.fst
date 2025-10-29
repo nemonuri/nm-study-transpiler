@@ -39,7 +39,7 @@ let return_wp (#result_t:eqtype) (#state_t:eqtype) (ts:ts_t) (m:imonad_t ts) (re
    - wp(statement1;statement2, post) = wp1(statement1, wp2(statement2, post))
    - https://en.wikipedia.org/wiki/Predicate_transformer_semantics#Sequence *)
 unfold
-let bind_wp (#result1_t #result2_t:eqtype) (#state_t:eqtype) (ts:ts_t) (m:imonad_t ts)
+let bind_wp (#result1_t #result2_t:eqtype) (#state_t:eqtype) (ts:ts_t)
             (wp1:wp_t state_t ts result1_t)
             (wp2_factory:ts result1_t -> wp_t state_t ts result2_t)
   : wp_t state_t ts result2_t =
@@ -50,17 +50,29 @@ let bind_wp (#result1_t #result2_t:eqtype) (#state_t:eqtype) (ts:ts_t) (m:imonad
         (wp2_factory maybe_result1 post1_state post)
     in
     wp1 pre1_state post1
-        
-  //let post_factory: post_t state_t ts 
-  //let outer_post: post_t state_t ts result1_t =
-  //  fun (outer_maybe_result, post_state) -> 
-  //    inner_wp_selector outer_maybe_result 
-  //fun outer_pre_state inner_post ->
-  //  outer_wp
 
+open FStar.Monotonic.Pure
 
-//type bind_wp_t (state_t:eqtype) (ts:ts_t) = 
-//  (result1_t:eqtype) -> (result2_t:eqtype) -> (wp1:wp_t state_t ts result1_t) -> (wp2:result1_t -> wp_t state_t ts result2_t) -> (wp_t state_t ts result2_t)
+// uncurried state monad representation 
+(* Note: 'Type' 보다 'Effect' 가 사실상 더 상위 타입이구나... *)
+//effect t (result_t:eqtype) (state_t:eqtype) (ts:ts_t) (wp:wp_t state_t ts result_t) (pre_state:state_t) =
+//  PURE ((ts result_t) & state_t) (as_pure_wp (wp pre_state))
+
+type arrow_t (result_t op_expr_t state_t:eqtype) (ts:ts_t) (wp:wp_t state_t ts result_t) =
+  (pre_state:state_t) -> (op_expr:op_expr_t) -> PURE ((ts result_t) & state_t) (as_pure_wp (wp pre_state))
+
+type post_factory_t (state_t:eqtype) (ts:ts_t) (result_t:eqtype) = state_t -> post_t state_t ts result_t
+let to_post_factory (state_t:eqtype) (ts:ts_t) (result_t:eqtype) 
+                    (source:state_t -> (ts result_t) -> state_t -> Tot Type0)
+  : Tot (post_factory_t state_t ts result_t) =
+  fun (state:state_t) (r:(ts result_t) & state_t) -> source state (fst r) (snd r)
+
+type hoare_t 
+  (result_t op_expr_t state_t:eqtype) (ts:ts_t) 
+  (pre:pre_t state_t) (post_factory:post_factory_t state_t ts result_t)
+  =
+  (pre_state:state_t) -> (op_expr:op_expr_t) -> 
+    Pure ((ts result_t) & state_t) (pre pre_state) (fun r -> post_factory pre_state r)
 
 (*
 noeq
@@ -69,11 +81,3 @@ type t (state_t:eqtype) (ts:ts_t) = {
   bind_wp: bind_wp_t state_t ts;
 }
 *)
-
-//type repr_t (result_t:eqtype) (state_t:eqtype) (ts:type_selector_t) (wp:wp_t state_t ts result_t) = 
-//  (state:state_t) -> (forall )
-
-
-//type arrow_t (state_t source_t result_t:Type) = state_t -> source_t -> result_t -> state_t
-
-//let compute #state_t 
