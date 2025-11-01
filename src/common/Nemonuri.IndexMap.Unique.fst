@@ -54,12 +54,21 @@ let lemma_unique_key_predicate (#data_t:eqtype) (m:t data_t) (key:key_t m)
     //assert (F.feq #(key_t m) #(fun _ -> Type0) tm3 tm4);
     //assert (Lu.predicate_is_linear_unique 0 (count m) tm2 key);
     //assert (equal_selection m v key);
+    let open FStar.Stubs.Tactics.V2.Builtins in (
+      assert True by (dump "dumped!")
+    );
     lemma_unique_data_predicate m v key
   in
   lemma_pl_to_pr' ();
   lemma_pr_to_pl' ()
 
 type unique_key_t (#data_t:eqtype) (m:t data_t) = x:key_t m{unique_key_predicate m x}
+
+let _ = assert True by (
+  let open FStar.Tactics.V2 in (
+    norm_term [delta] (`lemma_unique_key_predicate) |> term_to_string |> print
+  )
+)
 
 (*
 let is_max_selection_not_equal_in 

@@ -205,3 +205,22 @@ type t =
 | PropertySig: property_sig_t -> t
 | LocalVarSig: local_var_sig_t -> t
 
+//open FStar.Reflection.V2
+open FStar.Tactics.V2
+let _ = assert True by (
+  //let s = `t in
+  match lookup_typ (top_env ()) ["Nemonuri.Dotnet.Signature"; "t"] with
+  | None -> fail "1"
+  | Some se -> 
+      let asdf = inspect_sigelt se in
+      norm_term [delta] (quote asdf) |> term_to_string |> print
+
+)
+
+(*
+let _ = assert True by (
+  let open FStar.Tactics.V2 in (
+    norm_term [delta] (`t) |> term_to_string |> print
+  )
+)
+*)
