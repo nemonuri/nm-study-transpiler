@@ -5,3 +5,8 @@
 1. Ｌ의 모든 Expression 에 Dijkstra Monad 연산을 적용해 Verification conditions(*1*) 을 구할 수 있어야 한다.
 2. 모든 (*1*)을 Ｌ로 표현할 수 있어야 한다.
 3. Ｌ의 모든 Evaluation 이 Terminate 함을 증명할 수 있어야 한다.
+
+
+...있다...! SQL!
+- [Eval.DB.fst](https://github.com/FStarLang/FStar/blob/master/examples/termination/Eval.DB.fst)
+- https://en.wikipedia.org/wiki/Defunctionalization
